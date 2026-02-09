@@ -14,6 +14,10 @@ Uses an **ESP32-C3 with OLED display** (ABRobot 0.42") and a **BPW40 photodiode*
 - **Web dashboard** — built-in on port 80
 - **OTA updates** — flash new firmware over WiFi
 
+## ESPHome Web UI
+
+![ESPHome device page](docs/ESP32_backend.png)
+
 ## What You Need
 
 | Part | Notes |
