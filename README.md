@@ -1,5 +1,7 @@
 # esphome-sml-reader
 
+**Language:** English | [Deutsch](README.de.md)
+
 Read your electricity meter via its infrared (IR) interface — no wiring into mains required.  
 Uses an **ESP32-C3 with OLED display** (ABRobot 0.42") and a **BPW40 photodiode** to receive SML data from an ISKRA smart meter. Values are pushed to **Home Assistant** over WiFi.
 
