@@ -1,0 +1,293 @@
+# ===================================================
+# Smart Meter – FINAL VERSION
+# ESP32-C3 OLED (ABRobot 0.42") + BPW40 photodiode
+# Reads SML data from the ISKRA electricity meter
+#
+# BPW40 wiring:
+#   Cathode (short leg)  → 3.3V (PURPLE)
+#   Anode (long leg)     → GPIO20/RX (WHITE)
+#   1kΩ resistor         → GPIO20 (WHITE) to GND (BLACK)
+#   Keep the diode light-tight on the meter's IR interface!
+# ===================================================
+
+esphome:
+  name: smart-meter-abrobot
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+# --- LOGGING ---
+logger:
+  level: DEBUG
+  baud_rate: 0
+  logs:
+    i2c.idf: WARN
+    ssd1306: WARN
+    display: WARN
+    sml: INFO
+    sml_sensor: INFO
+
+# --- WIFI & ACCESS ---
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+
+ota:
+  platform: esphome
+
+api:
+
+web_server:
+  port: 80
+
+# --- I2C FOR DISPLAY ---
+i2c:
+  sda: 5
+  scl: 6
+
+# --- FONTS ---
+font:
+  # Small font for titles and units
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 8
+  # Medium font (waiting screen)
+  - file: "gfonts://Roboto"
+    id: font_medium
+    size: 10
+  # Large font for values
+  - file: "gfonts://Roboto"
+    id: font_large
+    size: 16
+
+# --- BLUE LED (GPIO8) ---
+# Blinks regularly when SML data is received
+output:
+  - platform: gpio
+    pin:
+      number: 8
+      inverted: true
+      ignore_strapping_warning: true
+    id: blue_led
+
+# --- GLOBAL VARIABLES ---
+globals:
+  # Tracks if SML data is being received
+  - id: sml_data_received
+    type: bool
+    initial_value: "false"
+  # Blink state for the LED
+  - id: blink_state
+    type: bool
+    initial_value: "false"
+  # Which page is shown (0=CURR, 1=IMPORT, 2=EXPORT)
+  - id: display_page
+    type: int
+    initial_value: "0"
+  # Tracks whether the display is on
+  - id: display_active
+    type: bool
+    initial_value: "true"
+  # Seconds since the display was turned on (for auto-off)
+  - id: auto_off_seconds
+    type: int
+    initial_value: "0"
+
+# --- INTERVALS ---
+interval:
+  # LED blink control
+  - interval: 500ms
+    then:
+      - lambda: |-
+          if (id(sml_data_received)) {
+            id(blink_state) = !id(blink_state);
+            id(blue_led).set_state(id(blink_state));
+          } else {
+            id(blue_led).set_state(false);
+            id(blink_state) = false;
+          }
+  # Reset reception status every 5 seconds
+  - interval: 5s
+    then:
+      - lambda: |-
+          id(sml_data_received) = false;
+  # Auto-off timer: turn display off after 5 minutes
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (id(display_active) && id(display_auto_off).state) {
+            id(auto_off_seconds) += 1;
+            if (id(auto_off_seconds) >= 300) {
+              id(display_active) = false;
+              id(display_switch).publish_state(false);
+              id(auto_off_seconds) = 0;
+            }
+          }
+  # Display page rotation: CURR 5s → IMPORT 5s → EXPORT 5s
+  - interval: 1s
+    then:
+      - lambda: |-
+          static int counter = 0;
+          counter++;
+
+          // Page 0 (CURR): show for 5 seconds
+          if (id(display_page) == 0 && counter >= 5) {
+            id(display_page) = 1;
+            counter = 0;
+          }
+          // Page 1 (IMPORT): show for 5 seconds
+          else if (id(display_page) == 1 && counter >= 5) {
+            id(display_page) = 2;
+            counter = 0;
+          }
+          // Page 2 (EXPORT): show for 5 seconds
+          else if (id(display_page) == 2 && counter >= 5) {
+            id(display_page) = 0;
+            counter = 0;
+          }
+
+# --- UART FOR IR RECEIVER ---
+uart:
+  id: uart_bus
+  rx_pin:
+    number: 20
+    inverted: true
+    mode: INPUT
+  baud_rate: 9600
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+
+# --- SML PROTOCOL ---
+sml:
+  id: mysml
+  uart_id: uart_bus
+  on_data:
+    then:
+      - lambda: |-
+          id(sml_data_received) = true;
+
+# --- SENSORS (ISKRA meter OBIS codes) ---
+sensor:
+  # 1.8.0: Total grid import energy (kWh)
+  - platform: sml
+    sml_id: mysml
+    name: "Grid Import Total"
+    id: grid_import_total
+    obis_code: "1-0:1.8.0"
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 1
+    device_class: energy
+    state_class: total_increasing
+    icon: "mdi:counter"
+    filters:
+      - multiply: 0.0001
+      - throttle: 60s
+
+  # 2.8.0: Total grid export energy (kWh) – e.g. PV system
+  - platform: sml
+    sml_id: mysml
+    name: "Grid Export Total"
+    id: grid_export_total
+    obis_code: "1-0:2.8.0"
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 1
+    device_class: energy
+    state_class: total_increasing
+    icon: "mdi:solar-power"
+    filters:
+      - multiply: 0.0001
+      - throttle: 60s
+
+  # 16.7.0: Instantaneous active power (W) – positive = import, negative = export
+  - platform: sml
+    sml_id: mysml
+    id: current_power
+    name: "Current Power"
+    obis_code: "1-0:16.7.0"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+    device_class: power
+    icon: "mdi:flash"
+    filters:
+      - throttle: 10s
+
+  # WiFi signal strength
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+# --- SWITCHES ---
+switch:
+  # Manual on/off for the display
+  - platform: template
+    name: "Display"
+    id: display_switch
+    icon: "mdi:monitor"
+    restore_mode: ALWAYS_ON
+    lambda: |-
+      return id(display_active);
+    turn_on_action:
+      - lambda: |-
+          id(display_active) = true;
+          id(auto_off_seconds) = 0;
+    turn_off_action:
+      - lambda: |-
+          id(display_active) = false;
+
+  # Auto-off after 5 minutes
+  - platform: template
+    name: "Display Auto-Off"
+    id: display_auto_off
+    icon: "mdi:timer-outline"
+    restore_mode: ALWAYS_OFF
+    optimistic: true
+    turn_on_action:
+      - lambda: |-
+          id(auto_off_seconds) = 0;
+
+# --- DISPLAY (SSD1306 72x40 on ABRobot board) ---
+# Rotation: CURR 5s → IMPORT 5s → EXPORT 5s
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 72x40"
+    address: 0x3C
+    lambda: |-
+      if (!id(display_active)) {
+        it.fill(COLOR_OFF);
+        return;
+      }
+
+      if (!id(current_power).has_state()) {
+        // No data received yet
+        it.printf(0, 0, id(font_large), "Smart");
+        it.print(0, 22, id(font_medium), "Waiting...");
+        return;
+      }
+
+      // Page 0: Current power (CURR) – 5 seconds
+      if (id(display_page) == 0) {
+        it.print(0, 0, id(font_small), "CURR");
+        it.printf(0, 14, id(font_large), "%.0f W", id(current_power).state);
+      }
+
+      // Page 1: Grid import (IMPORT) – 5 seconds
+      if (id(display_page) == 1) {
+        it.print(0, 0, id(font_small), "IMPORT");
+        if (id(grid_import_total).has_state()) {
+          it.printf(0, 14, id(font_large), "%.1f", id(grid_import_total).state);
+          it.print(0, 32, id(font_small), "kWh");
+        }
+      }
+
+      // Page 2: Grid export (EXPORT) – 5 seconds
+      if (id(display_page) == 2) {
+        it.print(0, 0, id(font_small), "EXPORT");
+        if (id(grid_export_total).has_state()) {
+          it.printf(0, 14, id(font_large), "%.1f", id(grid_export_total).state);
+          it.print(0, 32, id(font_small), "kWh");
+        }
+      }

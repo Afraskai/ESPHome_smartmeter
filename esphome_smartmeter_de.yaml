@@ -1,0 +1,293 @@
+# ===================================================
+# Smart Meter – FINALE VERSION
+# ESP32-C3 OLED (ABRobot 0.42") + BPW40 Fotodiode
+# Liest SML-Daten vom ISKRA Stromzähler
+#
+# Verkabelung BPW40:
+#   Kathode (kurzes Bein) → 3.3V (LILA)
+#   Anode (langes Bein)   → GPIO20/RX (WEISS)
+#   1kΩ Widerstand        → GPIO20 (WEISS) nach GND (SCHWARZ)
+#   Diode lichtdicht auf IR-Schnittstelle des Zählers!
+# ===================================================
+
+esphome:
+  name: smart-meter-abrobot
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+# --- LOGGING ---
+logger:
+  level: DEBUG
+  baud_rate: 0
+  logs:
+    i2c.idf: WARN
+    ssd1306: WARN
+    display: WARN
+    sml: INFO
+    sml_sensor: INFO
+
+# --- WLAN & ZUGRIFF ---
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+
+ota:
+  platform: esphome
+
+api:
+
+web_server:
+  port: 80
+
+# --- I2C FÜR DISPLAY ---
+i2c:
+  sda: 5
+  scl: 6
+
+# --- SCHRIFTEN ---
+font:
+  # Kleine Schrift für Titel und Einheiten
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 8
+  # Mittlere Schrift (Wartebildschirm)
+  - file: "gfonts://Roboto"
+    id: font_medium
+    size: 10
+  # Große Schrift für Werte
+  - file: "gfonts://Roboto"
+    id: font_large
+    size: 16
+
+# --- BLAUE LED (GPIO8) ---
+# Blinkt regelmäßig wenn SML-Daten empfangen werden
+output:
+  - platform: gpio
+    pin:
+      number: 8
+      inverted: true
+      ignore_strapping_warning: true
+    id: blue_led
+
+# --- GLOBALE VARIABLEN ---
+globals:
+  # Merkt sich ob SML-Daten empfangen werden
+  - id: sml_data_received
+    type: bool
+    initial_value: "false"
+  # Blink-Status für LED
+  - id: blink_state
+    type: bool
+    initial_value: "false"
+  # Welche Seite wird angezeigt (0=CURR, 1=BEZUG, 2=EINSP)
+  - id: display_page
+    type: int
+    initial_value: "0"
+  # Ob das Display eingeschaltet ist
+  - id: display_active
+    type: bool
+    initial_value: "true"
+  # Sekunden seit dem Einschalten (für Auto-Off)
+  - id: auto_off_seconds
+    type: int
+    initial_value: "0"
+
+# --- INTERVALLE ---
+interval:
+  # LED Blink-Steuerung
+  - interval: 500ms
+    then:
+      - lambda: |-
+          if (id(sml_data_received)) {
+            id(blink_state) = !id(blink_state);
+            id(blue_led).set_state(id(blink_state));
+          } else {
+            id(blue_led).set_state(false);
+            id(blink_state) = false;
+          }
+  # Alle 5 Sekunden den Empfangsstatus zurücksetzen
+  - interval: 5s
+    then:
+      - lambda: |-
+          id(sml_data_received) = false;
+  # Auto-Off Timer: Display nach 5 Minuten abschalten
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (id(display_active) && id(display_auto_off).state) {
+            id(auto_off_seconds) += 1;
+            if (id(auto_off_seconds) >= 300) {
+              id(display_active) = false;
+              id(display_switch).publish_state(false);
+              id(auto_off_seconds) = 0;
+            }
+          }
+  # Display-Seitenwechsel: CURR 5s → BEZUG 5s → EINSP 5s
+  - interval: 1s
+    then:
+      - lambda: |-
+          static int counter = 0;
+          counter++;
+
+          // Seite 0 (CURR): 5 Sekunden anzeigen
+          if (id(display_page) == 0 && counter >= 5) {
+            id(display_page) = 1;
+            counter = 0;
+          }
+          // Seite 1 (BEZUG): 5 Sekunden anzeigen
+          else if (id(display_page) == 1 && counter >= 5) {
+            id(display_page) = 2;
+            counter = 0;
+          }
+          // Seite 2 (EINSP): 5 Sekunden anzeigen
+          else if (id(display_page) == 2 && counter >= 5) {
+            id(display_page) = 0;
+            counter = 0;
+          }
+
+# --- UART FÜR IR-EMPFANG ---
+uart:
+  id: uart_bus
+  rx_pin:
+    number: 20
+    inverted: true
+    mode: INPUT
+  baud_rate: 9600
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+
+# --- SML PROTOKOLL ---
+sml:
+  id: mysml
+  uart_id: uart_bus
+  on_data:
+    then:
+      - lambda: |-
+          id(sml_data_received) = true;
+
+# --- SENSOREN (ISKRA Stromzähler OBIS Codes) ---
+sensor:
+  # 1.8.0: Gesamter Strombezug vom Netz (kWh)
+  - platform: sml
+    sml_id: mysml
+    name: "Zaehlerstand Bezug"
+    id: bezug
+    obis_code: "1-0:1.8.0"
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 1
+    device_class: energy
+    state_class: total_increasing
+    icon: "mdi:counter"
+    filters:
+      - multiply: 0.0001
+      - throttle: 60s
+
+  # 2.8.0: Gesamte Einspeisung ins Netz (kWh) – z.B. PV
+  - platform: sml
+    sml_id: mysml
+    name: "Zaehlerstand Einspeisung"
+    id: einspeisung
+    obis_code: "1-0:2.8.0"
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 1
+    device_class: energy
+    state_class: total_increasing
+    icon: "mdi:solar-power"
+    filters:
+      - multiply: 0.0001
+      - throttle: 60s
+
+  # 16.7.0: Aktuelle Wirkleistung (W) – positiv = Bezug, negativ = Einspeisung
+  - platform: sml
+    sml_id: mysml
+    id: current_power
+    name: "Aktuelle Leistung"
+    obis_code: "1-0:16.7.0"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+    device_class: power
+    icon: "mdi:flash"
+    filters:
+      - throttle: 10s
+
+  # WiFi-Signalstärke
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+# --- SCHALTER ---
+switch:
+  # Display manuell ein-/ausschalten
+  - platform: template
+    name: "Display"
+    id: display_switch
+    icon: "mdi:monitor"
+    restore_mode: ALWAYS_ON
+    lambda: |-
+      return id(display_active);
+    turn_on_action:
+      - lambda: |-
+          id(display_active) = true;
+          id(auto_off_seconds) = 0;
+    turn_off_action:
+      - lambda: |-
+          id(display_active) = false;
+
+  # Automatische Abschaltung nach 5 Minuten
+  - platform: template
+    name: "Display Auto-Off"
+    id: display_auto_off
+    icon: "mdi:timer-outline"
+    restore_mode: ALWAYS_OFF
+    optimistic: true
+    turn_on_action:
+      - lambda: |-
+          id(auto_off_seconds) = 0;
+
+# --- DISPLAY (SSD1306 72x40 auf ABRobot Board) ---
+# Scrolling: CURR 5s → BEZUG 5s → EINSP 5s
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 72x40"
+    address: 0x3C
+    lambda: |-
+      if (!id(display_active)) {
+        it.fill(COLOR_OFF);
+        return;
+      }
+
+      if (!id(current_power).has_state()) {
+        // Noch keine Daten empfangen
+        it.printf(0, 0, id(font_large), "Smart");
+        it.print(0, 22, id(font_medium), "Warte...");
+        return;
+      }
+
+      // Seite 0: Aktuelle Leistung (CURR) – 5 Sekunden
+      if (id(display_page) == 0) {
+        it.print(0, 0, id(font_small), "CURR");
+        it.printf(0, 14, id(font_large), "%.0f W", id(current_power).state);
+      }
+
+      // Seite 1: Bezug (IN) – 5 Sekunden
+      if (id(display_page) == 1) {
+        it.print(0, 0, id(font_small), "BEZUG");
+        if (id(bezug).has_state()) {
+          it.printf(0, 14, id(font_large), "%.1f", id(bezug).state);
+          it.print(0, 32, id(font_small), "kWh");
+        }
+      }
+
+      // Seite 2: Einspeisung (OUT) – 5 Sekunden
+      if (id(display_page) == 2) {
+        it.print(0, 0, id(font_small), "EINSP");
+        if (id(einspeisung).has_state()) {
+          it.printf(0, 14, id(font_large), "%.1f", id(einspeisung).state);
+          it.print(0, 32, id(font_small), "kWh");
+        }
+      }
