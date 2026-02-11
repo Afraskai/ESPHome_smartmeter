@@ -5,6 +5,8 @@
 Lies deinen Stromzähler über die Infrarot-(IR)-Schnittstelle aus – **ohne** Eingriff in die Netzverkabelung.  
 Verwendet einen **ESP32-C3 mit OLED-Display** (ABRobot 0.42") und eine **BPW40 Fotodiode**, um SML-Daten von einem ISKRA-Zähler zu empfangen. Die Werte werden per WLAN an **Home Assistant** übertragen.
 
+> **Voraussetzung:** Aktiviere zuerst die IR-Diode am Zähler. Gib die PIN an der Zählerfront (laut Anleitung deines Netzbetreibers) ein, damit die IR-LED leuchtet und detaillierte SML-Daten verfügbar sind.
+
 ![Im Zählerschrank](docs/IMG_4657_1.JPG)
 
 ## Funktionen
@@ -98,6 +100,8 @@ graph LR
    - **Aktuelle Leistung** (W)
    - **Zählerstand Bezug gesamt** (kWh)
    - **Zählerstand Einspeisung gesamt** (kWh)
+
+> **Hinweis:** Zählerschränke sind oft aus Metall und schirmen WLAN stark ab. Stelle sicher, dass der ESP32 ein stabiles Signal hat.
 
 ## Im Zählerschrank
 

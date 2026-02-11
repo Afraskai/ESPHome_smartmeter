@@ -5,6 +5,8 @@
 Read your electricity meter via its infrared (IR) interface — no wiring into mains required.  
 Uses an **ESP32-C3 with OLED display** (ABRobot 0.42") and a **BPW40 photodiode** to receive SML data from an ISKRA smart meter. Values are pushed to **Home Assistant** over WiFi.
 
+> **Requirement:** Unlock the meter's IR diode first. Enter the PIN on the meter front (per your utility instructions) so the IR LED turns on and detailed SML data becomes available.
+
 ![Installed on meter](docs/IMG_4657_1.JPG)
 
 ## Features
@@ -98,6 +100,8 @@ graph LR
    - **Current Power** (W)
    - **Grid Import Total** (kWh)
    - **Grid Export Total** (kWh)
+
+> **Tip:** Smart meter cabinets are often metal and shield WiFi. Make sure the ESP32 gets a reliable signal
 
 ## Installed on the Meter
 
