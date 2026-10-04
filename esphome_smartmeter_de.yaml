@@ -219,6 +219,7 @@ sensor:
   # WiFi-Signalstärke
   - platform: wifi_signal
     name: "WiFi Signal"
+    id: wifi_rssi
     update_interval: 60s
 
 # --- SCHALTER ---
@@ -249,6 +250,36 @@ switch:
     turn_on_action:
       - lambda: |-
           id(auto_off_seconds) = 0;
+
+# --- TEXT-SENSOREN ---
+text_sensor:
+  # WLAN-Qualität als Klartext: Stufe (dBm)
+  - platform: template
+    name: "WiFi Qualitaet"
+    id: wifi_quality
+    icon: "mdi:wifi"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      if (!id(wifi_rssi).has_state()) {
+        return std::string("unbekannt");
+      }
+      float rssi = id(wifi_rssi).state;
+      const char *rating;
+      if (rssi >= -50.0f) {
+        rating = "sehr gut";
+      } else if (rssi >= -60.0f) {
+        rating = "gut";
+      } else if (rssi >= -70.0f) {
+        rating = "mittel";
+      } else if (rssi >= -80.0f) {
+        rating = "schwach";
+      } else {
+        rating = "sehr schwach";
+      }
+      char buf[40];
+      snprintf(buf, sizeof(buf), "%s (%.0f dBm)", rating, rssi);
+      return std::string(buf);
 
 # --- DISPLAY (SSD1306 72x40 auf ABRobot Board) ---
 # Scrolling: CURR 5s → BEZUG 5s → EINSP 5s
