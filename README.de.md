@@ -135,6 +135,8 @@ Der Textsensor `WiFi Qualitaet` ordnet die Signalstärke in fünf Stufen ein und
 | -70 bis -79 dBm | schwach |
 | < -80 dBm | sehr schwach |
 
+> **Hinweis:** Direkt nach dem Neustart steht für etwa eine Minute `unbekannt` — der Sensor pollt im 60-Sekunden-Takt und beim ersten Poll nach dem Boot hat der WLAN-Sensor noch keinen Wert. Danach steht der echte Messwert da.
+
 ## Kompatibilität
 
 Getestet mit **ISKRA** Smart Metern, die **SML** über IR ausgeben. Sollte mit jedem SML-fähigen Zähler funktionieren – ggf. müssen die OBIS-Codes in der YAML-Konfiguration für dein Zählermodell angepasst werden.

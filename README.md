@@ -135,6 +135,8 @@ The `WiFi Quality` text sensor rates the signal in five levels and appends the r
 | -70 to -79 dBm | weak |
 | < -80 dBm | very weak |
 
+> **Note:** Right after a restart the sensor reads `unknown` for about a minute — it polls every 60 seconds and on the first poll after boot the WiFi sensor has no value yet. The real reading follows.
+
 ## Compatibility
 
 Tested with **ISKRA** smart meters using the **SML protocol** over IR. Should work with any SML-capable meter — you may need to adjust the OBIS codes in the YAML config for your specific meter model.

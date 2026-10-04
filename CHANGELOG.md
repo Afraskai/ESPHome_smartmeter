@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1] - 2026-10-04
+
+### Changed
+- The raw RSSI sensor is now marked `internal`. It only feeds the `WiFi Qualitaet`
+  text sensor and no longer shows up as an entity of its own in the web UI or in
+  Home Assistant. The dBm value is still part of the text sensor's output.
+
 ## [1.1.0] - 2026-10-04
 
 Verified against **ESPHome 2026.9.1**: the previous configuration built unchanged
@@ -10,8 +17,7 @@ RAM 32.9 %, flash 52.4 %).
 ### Added
 - `WiFi Qualitaet` text sensor: plain-language WiFi rating in 5 levels with the
   raw dBm value in brackets (e.g. `schwach (-78 dBm)`). Shows up in the ESPHome
-  web UI and in Home Assistant. It is fed by the `wifi_signal` sensor, which is
-  now marked `internal` and therefore no longer appears as its own entity.
+  web UI and in Home Assistant next to the numeric `WiFi Signal` sensor.
 
 ### Notes
 - Since ESPHome 2026.7.0, ESP32 builds default to the native `esp-idf` toolchain.
