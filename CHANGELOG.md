@@ -10,7 +10,8 @@ RAM 32.9 %, flash 52.4 %).
 ### Added
 - `WiFi Qualitaet` text sensor: plain-language WiFi rating in 5 levels with the
   raw dBm value in brackets (e.g. `schwach (-78 dBm)`). Shows up in the ESPHome
-  web UI and in Home Assistant next to the numeric `WiFi Signal` sensor.
+  web UI and in Home Assistant. It is fed by the `wifi_signal` sensor, which is
+  now marked `internal` and therefore no longer appears as its own entity.
 
 ### Notes
 - Since ESPHome 2026.7.0, ESP32 builds default to the native `esp-idf` toolchain.

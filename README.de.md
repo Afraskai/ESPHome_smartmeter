@@ -125,7 +125,7 @@ Das OLED wechselt automatisch alle 5 Sekunden:
 
 ## WLAN-Qualität
 
-Neben dem numerischen Sensor `WiFi Signal` (dBm) gibt es den Textsensor `WiFi Qualitaet`, der die Signalstärke in fünf Stufen einordnet und den Rohwert in Klammern mitzeigt — z. B. `schwach (-78 dBm)`. Beide Sensoren erscheinen in der Web-Oberfläche und in Home Assistant.
+Der Textsensor `WiFi Qualitaet` ordnet die Signalstärke in fünf Stufen ein und zeigt den Rohwert in Klammern mit — z. B. `schwach (-78 dBm)`. Er erscheint in der Web-Oberfläche und in Home Assistant. Der zugrunde liegende numerische RSSI-Sensor ist `internal` gesetzt und taucht deshalb nicht als eigene Entity auf.
 
 | Signalstärke | Bewertung |
 |---|---|

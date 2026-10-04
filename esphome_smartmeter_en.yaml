@@ -216,10 +216,11 @@ sensor:
     filters:
       - throttle: 10s
 
-  # WiFi signal strength
+  # WiFi signal strength – data source for the text sensor, not shown itself
   - platform: wifi_signal
     name: "WiFi Signal"
     id: wifi_rssi
+    internal: true
     update_interval: 60s
 
 # --- SWITCHES ---

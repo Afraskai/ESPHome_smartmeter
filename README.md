@@ -125,7 +125,7 @@ The OLED cycles automatically every 5 seconds:
 
 ## WiFi Quality
 
-Next to the numeric `WiFi Signal` sensor (dBm) there is a `WiFi Quality` text sensor that rates the signal in five levels and appends the raw value in brackets — e.g. `weak (-78 dBm)`. Both sensors show up in the web dashboard and in Home Assistant.
+The `WiFi Quality` text sensor rates the signal in five levels and appends the raw value in brackets — e.g. `weak (-78 dBm)`. It shows up in the web dashboard and in Home Assistant. The underlying numeric RSSI sensor is marked `internal`, so it does not appear as a separate entity.
 
 | Signal strength | Rating |
 |---|---|

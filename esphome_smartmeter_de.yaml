@@ -216,10 +216,11 @@ sensor:
     filters:
       - throttle: 10s
 
-  # WiFi-Signalstärke
+  # WiFi-Signalstärke – Datenquelle für den Textsensor, nicht selbst angezeigt
   - platform: wifi_signal
     name: "WiFi Signal"
     id: wifi_rssi
+    internal: true
     update_interval: 60s
 
 # --- SCHALTER ---
