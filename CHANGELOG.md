@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0] - 2026-10-04
+
+Verified against **ESPHome 2026.9.1**: the previous configuration built unchanged
+and was flashed and tested on the device (SML reception, OLED pages, web UI, OTA).
+Both language variants of this release compile cleanly (ESP-IDF toolchain,
+RAM 32.9 %, flash 52.4 %).
+
+### Added
+- `WiFi Qualitaet` text sensor: plain-language WiFi rating in 5 levels with the
+  raw dBm value in brackets (e.g. `schwach (-78 dBm)`). Shows up in the ESPHome
+  web UI and in Home Assistant next to the numeric `WiFi Signal` sensor.
+
+### Notes
+- Since ESPHome 2026.7.0, ESP32 builds default to the native `esp-idf` toolchain.
+  `framework: type: arduino` keeps working, but the `platformio` toolchain is
+  deprecated and will be removed in 2027.2.0.
+
 ## [1.0.0] - 2026-06-20
 
 ESPHome 2026.3.0+ changed the web_server default from v1 (embedded UI) to v2/v3

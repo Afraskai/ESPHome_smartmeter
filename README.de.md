@@ -15,6 +15,7 @@ Verwendet einen **ESP32-C3 mit OLED-Display** (ABRobot 0.42") und eine **BPW40 F
 - **Zählerstände gesamt** (kWh) — Bezug & Einspeisung
 - **Kleines OLED-Display** — wechselt zwischen aktueller Leistung, Bezug gesamt, Einspeisung gesamt
 - **Blaue LED** — blinkt, wenn Daten empfangen werden
+- **WLAN-Qualität** — Klartext-Bewertung in 5 Stufen inkl. dBm (z. B. `schwach (-78 dBm)`)
 - **Web-Oberfläche** — integriert auf Port 80
 - **OTA Updates** — Firmware-Updates über WLAN
 
@@ -83,6 +84,8 @@ graph LR
    wifi_password: "DeinPasswort"
    ```
 
+   Getestet mit **ESPHome 2026.9.1** (Dashboard oder CLI).
+
 2. **Fotodiode anschließen**  
    BPW40 wie im Diagramm oben anschließen.
 
@@ -100,8 +103,9 @@ graph LR
    - **Aktuelle Leistung** (W)
    - **Zählerstand Bezug gesamt** (kWh)
    - **Zählerstand Einspeisung gesamt** (kWh)
+   - **WiFi Qualitaet** (Text, z. B. `gut (-58 dBm)`)
 
-> **Hinweis:** Zählerschränke sind oft aus Metall und schirmen WLAN stark ab. Stelle sicher, dass der ESP32 ein stabiles Signal hat.
+> **Hinweis:** Zählerschränke sind oft aus Metall und schirmen WLAN stark ab. Stelle sicher, dass der ESP32 ein stabiles Signal hat – der Sensor `WiFi Qualitaet` zeigt dir, wie gut es tatsächlich ist.
 
 ## Im Zählerschrank
 
@@ -118,6 +122,18 @@ Das OLED wechselt automatisch alle 5 Sekunden:
 | 1 | `CURR` | Aktuelle Leistung in W |
 | 2 | `IMPORT` | Bezug gesamt in kWh |
 | 3 | `EXPORT` | Einspeisung gesamt in kWh |
+
+## WLAN-Qualität
+
+Neben dem numerischen Sensor `WiFi Signal` (dBm) gibt es den Textsensor `WiFi Qualitaet`, der die Signalstärke in fünf Stufen einordnet und den Rohwert in Klammern mitzeigt — z. B. `schwach (-78 dBm)`. Beide Sensoren erscheinen in der Web-Oberfläche und in Home Assistant.
+
+| Signalstärke | Bewertung |
+|---|---|
+| ≥ -50 dBm | sehr gut |
+| -50 bis -59 dBm | gut |
+| -60 bis -69 dBm | mittel |
+| -70 bis -79 dBm | schwach |
+| < -80 dBm | sehr schwach |
 
 ## Kompatibilität
 

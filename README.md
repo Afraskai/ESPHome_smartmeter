@@ -15,6 +15,7 @@ Uses an **ESP32-C3 with OLED display** (ABRobot 0.42") and a **BPW40 photodiode*
 - **Total energy counters** (kWh) — grid import & grid export
 - **Tiny OLED display** — cycles through current power, import total, export total
 - **Blue LED** — blinks when data is being received
+- **WiFi quality** — plain-language rating in 5 levels including dBm (e.g. `weak (-78 dBm)`)
 - **Web dashboard** — built-in on port 80
 - **OTA updates** — flash new firmware over WiFi
 
@@ -83,6 +84,8 @@ graph LR
    wifi_password: "YourPassword"
    ```
 
+   Tested with **ESPHome 2026.9.1** (dashboard or CLI).
+
 2. **Wire the photodiode**  
    Connect the BPW40 as shown in the wiring diagram above.
 
@@ -100,8 +103,9 @@ graph LR
    - **Current Power** (W)
    - **Grid Import Total** (kWh)
    - **Grid Export Total** (kWh)
+   - **WiFi Quality** (text, e.g. `good (-58 dBm)`)
 
-> **Tip:** Smart meter cabinets are often metal and shield WiFi. Make sure the ESP32 gets a reliable signal
+> **Tip:** Smart meter cabinets are often metal and shield WiFi. Make sure the ESP32 gets a reliable signal — the `WiFi Quality` sensor shows you how good it actually is.
 
 ## Installed on the Meter
 
@@ -118,6 +122,18 @@ The OLED cycles automatically every 5 seconds:
 | 1 | `CURR` | Current power in W |
 | 2 | `IMPORT` | Total grid import in kWh |
 | 3 | `EXPORT` | Total grid export in kWh |
+
+## WiFi Quality
+
+Next to the numeric `WiFi Signal` sensor (dBm) there is a `WiFi Quality` text sensor that rates the signal in five levels and appends the raw value in brackets — e.g. `weak (-78 dBm)`. Both sensors show up in the web dashboard and in Home Assistant.
+
+| Signal strength | Rating |
+|---|---|
+| ≥ -50 dBm | excellent |
+| -50 to -59 dBm | good |
+| -60 to -69 dBm | fair |
+| -70 to -79 dBm | weak |
+| < -80 dBm | very weak |
 
 ## Compatibility
 
